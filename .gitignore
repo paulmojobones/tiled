@@ -23,6 +23,18 @@ automappingconverter.exe
 *.lib
 *.exp
 *.intermediate.manifest
+*.tlog
+*.lastbuildstate
+tiled.log
+tiled.res
+*.ipch
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+*.pdb
+*.ilk
+
 
 # Build artifacts on Mac
 translations/phony_target.app
