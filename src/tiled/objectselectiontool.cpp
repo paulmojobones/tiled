@@ -39,7 +39,8 @@
 #include <QUndoStack>
 #include <QGraphicsView>
 
-#include <cmath>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 using namespace Tiled;
 using namespace Tiled::Internal;
