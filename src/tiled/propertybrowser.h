@@ -56,6 +56,11 @@ public:
     void setObject(Object *object);
 
     /**
+     * Returns the object for which the properties are displayed.
+     */
+    Object *object() const;
+
+    /**
      * Sets the \a mapDocument, used for keeping track of changes and for
      * undo/redo support.
      */
@@ -78,6 +83,7 @@ private slots:
     void layerChanged(int index);
     void objectGroupChanged(ObjectGroup *objectGroup);
     void imageLayerChanged(ImageLayer *imageLayer);
+    void tilesetChanged(Tileset *tileset);
     void terrainChanged(Tileset *tileset, int index);
 
     void propertyAdded(Object *object, const QString &name);
@@ -100,6 +106,8 @@ private:
         LayerFormatProperty,
         ImageSourceProperty,
         FlippingProperty,
+        DrawOrderProperty,
+        TileOffsetProperty,
         CustomProperty
     };
 
@@ -144,7 +152,13 @@ private:
 
     QStringList mLayerFormatNames;
     QStringList mFlippingFlagNames;
+    QStringList mDrawOrderNames;
 };
+
+inline Object *PropertyBrowser::object() const
+{
+    return mObject;
+}
 
 } // namespace Internal
 } // namespace Tiled

@@ -81,7 +81,7 @@
 #include "minimapdock.h"
 #include "consoledock.h"
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 #include "macsupport.h"
 #endif
 
@@ -128,7 +128,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags)
     mUi->setupUi(this);
     setCentralWidget(mDocumentManager->widget());
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     MacSupport::addFullscreen(this);
 #endif
 
@@ -401,13 +401,14 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags)
             this, SLOT(updateStatusInfoLabel(QString)));
     statusBar()->addWidget(mCurrentLayerLabel);
 
-    mUi->menuView->addSeparator();
-    mUi->menuView->addAction(mTilesetDock->toggleViewAction());
-    mUi->menuView->addAction(mTerrainDock->toggleViewAction());
-    mUi->menuView->addAction(mLayerDock->toggleViewAction());
-    mUi->menuView->addAction(undoDock->toggleViewAction());
-    mUi->menuView->addAction(mObjectsDock->toggleViewAction());
-    mUi->menuView->addAction(mMiniMapDock->toggleViewAction());
+    // Add the 'Views and Toolbars' submenu. This needs to happen after all
+    // the dock widgets and toolbars have been added to the main window.
+    QAction *viewsAndToolbars = new QAction(tr("Views and Toolbars"), this);
+    QMenu *popupMenu = createPopupMenu();
+    popupMenu->setParent(this);
+    viewsAndToolbars->setMenu(popupMenu);
+    mUi->menuView->insertAction(mUi->actionShowGrid, viewsAndToolbars);
+    mUi->menuView->insertSeparator(mUi->actionShowGrid);
 
     connect(mClipboardManager, SIGNAL(hasMapChanged()), SLOT(updateActions()));
 
@@ -416,14 +417,14 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags)
     connect(mDocumentManager, SIGNAL(documentCloseRequested(int)),
             this, SLOT(closeMapDocument(int)));
 
-    QShortcut *switchToLeftDocument = new QShortcut(tr("Ctrl+PgUp"), this);
+    QShortcut *switchToLeftDocument = new QShortcut(tr("Alt+Left"), this);
     connect(switchToLeftDocument, SIGNAL(activated()),
             mDocumentManager, SLOT(switchToLeftDocument()));
     QShortcut *switchToLeftDocument1 = new QShortcut(tr("Ctrl+Shift+Tab"), this);
     connect(switchToLeftDocument1, SIGNAL(activated()),
             mDocumentManager, SLOT(switchToLeftDocument()));
 
-    QShortcut *switchToRightDocument = new QShortcut(tr("Ctrl+PgDown"), this);
+    QShortcut *switchToRightDocument = new QShortcut(tr("Alt+Right"), this);
     connect(switchToRightDocument, SIGNAL(activated()),
             mDocumentManager, SLOT(switchToRightDocument()));
     QShortcut *switchToRightDocument1 = new QShortcut(tr("Ctrl+Tab"), this);

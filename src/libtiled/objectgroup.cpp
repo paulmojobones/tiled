@@ -40,12 +40,14 @@ using namespace Tiled;
 
 ObjectGroup::ObjectGroup()
     : Layer(ObjectGroupType, QString(), 0, 0, 0, 0)
+    , mDrawOrder(TopDownOrder)
 {
 }
 
 ObjectGroup::ObjectGroup(const QString &name,
                          int x, int y, int width, int height)
     : Layer(ObjectGroupType, name, x, y, width, height)
+    , mDrawOrder(TopDownOrder)
 {
 }
 
@@ -80,6 +82,28 @@ void ObjectGroup::removeObjectAt(int index)
 {
     MapObject *object = mObjects.takeAt(index);
     object->setObjectGroup(0);
+}
+
+void ObjectGroup::moveObjects(int from, int to, int count)
+{
+    // It's an error when 'to' lies within the moving range of objects
+    Q_ASSERT(count >= 0);
+    Q_ASSERT(to <= from || to >= from + count);
+
+    // Nothing to be done when 'to' is the start or the end of the range, or
+    // when the number of objects to be moved is 0.
+    if (to == from || to == from + count || count == 0)
+        return;
+
+    const QList<MapObject*> movingObjects = mObjects.mid(from, count);
+    mObjects.erase(mObjects.begin() + from,
+                   mObjects.begin() + from + count);
+
+    if (to > from)
+        to -= count;
+
+    for (int i = 0; i < count; ++i)
+        mObjects.insert(to + i, movingObjects.at(i));
 }
 
 QRectF ObjectGroup::objectsBoundingRect() const
@@ -178,7 +202,7 @@ void ObjectGroup::offset(const QPoint &offset,
 
 bool ObjectGroup::canMergeWith(Layer *other) const
 {
-    return dynamic_cast<ObjectGroup*>(other) != 0;
+    return other->isObjectGroup();
 }
 
 Layer *ObjectGroup::mergedWith(Layer *other) const
@@ -209,5 +233,35 @@ ObjectGroup *ObjectGroup::initializeClone(ObjectGroup *clone) const
     foreach (const MapObject *object, mObjects)
         clone->addObject(object->clone());
     clone->setColor(mColor);
+    clone->setDrawOrder(mDrawOrder);
     return clone;
+}
+
+
+QString Tiled::drawOrderToString(ObjectGroup::DrawOrder drawOrder)
+{
+    switch (drawOrder) {
+    default:
+    case ObjectGroup::UnknownOrder:
+        return QLatin1String("unknown");
+        break;
+    case ObjectGroup::TopDownOrder:
+        return QLatin1String("topdown");
+        break;
+    case ObjectGroup::IndexOrder:
+        return QLatin1String("index");
+        break;
+    }
+}
+
+ObjectGroup::DrawOrder Tiled::drawOrderFromString(const QString &string)
+{
+    ObjectGroup::DrawOrder drawOrder = ObjectGroup::UnknownOrder;
+
+    if (string == QLatin1String("topdown"))
+        drawOrder = ObjectGroup::TopDownOrder;
+    else if (string == QLatin1String("index"))
+        drawOrder = ObjectGroup::IndexOrder;
+
+    return drawOrder;
 }

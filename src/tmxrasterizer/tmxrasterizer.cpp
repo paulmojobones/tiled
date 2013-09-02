@@ -52,15 +52,17 @@ TmxRasterizer::~TmxRasterizer()
 {
 }
 
-void TmxRasterizer::render(const QString& mapFileName, const QString& bitmapFileName)
+int TmxRasterizer::render(const QString &mapFileName,
+                          const QString &imageFileName)
 {
     Map *map;
     MapRenderer *renderer;
     MapReader reader;
     map = reader.readMap(mapFileName);
     if (!map) {
-        qWarning() << "Error while reading" << mapFileName << ":\n" << reader.errorString();
-        return;
+        qWarning().nospace() << "Error while reading " << mapFileName << ":\n"
+                             << qPrintable(reader.errorString());
+        return 1;
     }
 
     switch (map->orientation()) {
@@ -69,6 +71,7 @@ void TmxRasterizer::render(const QString& mapFileName, const QString& bitmapFile
         break;
     case Map::Staggered:
         renderer = new StaggeredRenderer(map);
+        break;
     case Map::Orthogonal:
     default:
         renderer = new OrthogonalRenderer(map);
@@ -78,8 +81,8 @@ void TmxRasterizer::render(const QString& mapFileName, const QString& bitmapFile
     qreal xScale, yScale;
 
     if (mTileSize > 0) {
-        xScale = (qreal) mTileSize/map->tileWidth();
-        yScale = (qreal) mTileSize/map->tileHeight();
+        xScale = (qreal) mTileSize / map->tileWidth();
+        yScale = (qreal) mTileSize / map->tileHeight();
     } else {
         xScale = yScale = mScale;
     }
@@ -118,9 +121,11 @@ void TmxRasterizer::render(const QString& mapFileName, const QString& bitmapFile
     }
 
     // Save image
-    image.save(bitmapFileName);
+    image.save(imageFileName);
 
     delete renderer;
     qDeleteAll(map->tilesets());
     delete map;
+
+    return 0;
 }

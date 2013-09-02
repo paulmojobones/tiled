@@ -46,7 +46,7 @@ Map::Map(Orientation orientation,
     mHeight(height),
     mTileWidth(tileWidth),
     mTileHeight(tileHeight),
-    mLayerDataFormat(Default)
+    mLayerDataFormat(Base64Zlib)
 {
 }
 
@@ -74,6 +74,21 @@ void Map::adjustDrawMargins(const QMargins &margins)
                                        margins.right() - mTileWidth,
                                        margins.bottom()),
                               mDrawMargins);
+}
+
+/**
+ * Recomputes the draw margins for this map and each of its tile layers. Needed
+ * after the tile offset of a tileset has changed for example.
+ *
+ * \sa TileLayer::recomputeDrawMargins
+ */
+void Map::recomputeDrawMargins()
+{
+    mDrawMargins = QMargins();
+
+    foreach (Layer *layer, mLayers)
+        if (TileLayer *tileLayer = layer->asTileLayer())
+            tileLayer->recomputeDrawMargins();
 }
 
 int Map::layerCount(Layer::TypeFlag type) const
@@ -138,7 +153,7 @@ void Map::adoptLayer(Layer *layer)
 {
     layer->setMap(this);
 
-    if (TileLayer *tileLayer = dynamic_cast<TileLayer*>(layer))
+    if (TileLayer *tileLayer = layer->asTileLayer())
         adjustDrawMargins(tileLayer->drawMargins());
 }
 

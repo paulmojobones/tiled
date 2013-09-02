@@ -30,6 +30,7 @@
 #include "movemapobject.h"
 #include "objectgroup.h"
 #include "preferences.h"
+#include "raiselowerhelper.h"
 #include "rotatemapobject.h"
 #include "selectionrectangle.h"
 
@@ -41,6 +42,11 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+// MSVC 2010 math header does not come with M_PI
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 using namespace Tiled;
 using namespace Tiled::Internal;
@@ -247,6 +253,9 @@ void ObjectSelectionTool::keyPressed(QKeyEvent *event)
     case Qt::Key_Down:  moveBy = QPointF(0, 1); break;
     case Qt::Key_Left:  moveBy = QPointF(-1, 0); break;
     case Qt::Key_Right: moveBy = QPointF(1, 0); break;
+    default:
+        AbstractObjectTool::keyPressed(event);
+        return;
     }
 
     const QSet<MapObjectItem*> &items = mapScene()->selectedObjectItems();
@@ -563,8 +572,12 @@ void ObjectSelectionTool::updateMovingItems(const QPointF &pos,
         const QPointF newPixelPos = mOldObjectItemPositions.at(i) + diff;
         const QPointF newPos = renderer->pixelToTileCoords(newPixelPos);
         objectItem->setPos(newPixelPos);
-        objectItem->setZValue(newPixelPos.y());
         objectItem->mapObject()->setPosition(newPos);
+
+        ObjectGroup *objectGroup = objectItem->mapObject()->objectGroup();
+        if (objectGroup->drawOrder() == ObjectGroup::TopDownOrder)
+            objectItem->setZValue(newPixelPos.y());
+
         ++i;
     }
 }
@@ -643,9 +656,9 @@ void ObjectSelectionTool::updateRotatingItems(const QPointF &pos,
         const qreal newRotation = mOldObjectRotations.at(i) + angleDiff * 180 / M_PI;
 
         objectItem->setPos(newPixelPos);
-        objectItem->setZValue(newPixelPos.y());
         objectItem->mapObject()->setPosition(newPos);
         objectItem->setObjectRotation(newRotation);
+
         ++i;
     }
 }

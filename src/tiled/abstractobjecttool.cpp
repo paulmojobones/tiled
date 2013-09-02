@@ -28,8 +28,10 @@
 #include "maprenderer.h"
 #include "mapscene.h"
 #include "objectgroup.h"
+#include "raiselowerhelper.h"
 #include "utils.h"
 
+#include <QKeyEvent>
 #include <QMenu>
 #include <QUndoStack>
 
@@ -55,6 +57,18 @@ void AbstractObjectTool::activate(MapScene *scene)
 void AbstractObjectTool::deactivate(MapScene *)
 {
     mMapScene = 0;
+}
+
+void AbstractObjectTool::keyPressed(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_PageUp:    raise(); return;
+    case Qt::Key_PageDown:  lower(); return;
+    case Qt::Key_Home:      raiseToTop(); return;
+    case Qt::Key_End:       lowerToBottom(); return;
+    }
+
+    event->ignore();
 }
 
 void AbstractObjectTool::mouseLeft()
@@ -111,6 +125,26 @@ void AbstractObjectTool::flipVertically()
     mapDocument()->flipSelectedObjects(FlipVertically);
 }
 
+void AbstractObjectTool::raise()
+{
+    RaiseLowerHelper(mMapScene).raise();
+}
+
+void AbstractObjectTool::lower()
+{
+    RaiseLowerHelper(mMapScene).lower();
+}
+
+void AbstractObjectTool::raiseToTop()
+{
+    RaiseLowerHelper(mMapScene).raiseToTop();
+}
+
+void AbstractObjectTool::lowerToBottom()
+{
+    RaiseLowerHelper(mMapScene).lowerToBottom();
+}
+
 /**
  * Shows the context menu for map objects. The menu allows you to duplicate and
  * remove the map objects, or to edit their properties.
@@ -128,12 +162,7 @@ void AbstractObjectTool::showContextMenu(MapObjectItem *clickedObjectItem,
         return;
 
     const QList<MapObject*> &selectedObjects = mapDocument()->selectedObjects();
-
-    QList<ObjectGroup*> objectGroups;
-    foreach (Layer *layer, mapDocument()->map()->layers()) {
-        if (ObjectGroup *objectGroup = layer->asObjectGroup())
-            objectGroups.append(objectGroup);
-    }
+    const QList<ObjectGroup*> objectGroups = mapDocument()->map()->objectGroups();
 
     MapDocumentActionHandler *handler = MapDocumentActionHandler::instance();
 
@@ -142,10 +171,17 @@ void AbstractObjectTool::showContextMenu(MapObjectItem *clickedObjectItem,
     menu.addAction(handler->actionRemoveObjects());
 
     menu.addSeparator();
-    QAction *horizontalAction = menu.addAction(tr("Flip Horizontally"));
-    QAction *verticalAction = menu.addAction(tr("Flip Vertically"));
-    connect(horizontalAction, SIGNAL(triggered()), SLOT(flipHorizontally()));
-    connect(verticalAction, SIGNAL(triggered()), SLOT(flipVertically()));
+    menu.addAction(tr("Flip Horizontally"), this, SLOT(flipHorizontally()), QKeySequence(tr("X")));
+    menu.addAction(tr("Flip Vertically"), this, SLOT(flipVertically()), QKeySequence(tr("Y")));
+
+    ObjectGroup *objectGroup = RaiseLowerHelper::sameObjectGroup(selection);
+    if (objectGroup && objectGroup->drawOrder() == ObjectGroup::IndexOrder) {
+        menu.addSeparator();
+        menu.addAction(tr("Raise Object"), this, SLOT(raise()), QKeySequence(tr("PgUp")));
+        menu.addAction(tr("Lower Object"), this, SLOT(lower()), QKeySequence(tr("PgDown")));
+        menu.addAction(tr("Raise Object to Top"), this, SLOT(raiseToTop()), QKeySequence(tr("Home")));
+        menu.addAction(tr("Lower Object to Bottom"), this, SLOT(lowerToBottom()), QKeySequence(tr("End")));
+    }
 
     if (objectGroups.size() > 1) {
         menu.addSeparator();

@@ -135,11 +135,16 @@ int main(int argc, char *argv[])
 #ifdef BUILD_INFO_VERSION
     a.setApplicationVersion(QLatin1String(AS_STRING(BUILD_INFO_VERSION)));
 #else
-    a.setApplicationVersion(QLatin1String("0.9.0"));
+    a.setApplicationVersion(QLatin1String("0.9.1"));
 #endif
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     a.setAttribute(Qt::AA_DontShowIconsInMenus);
+#endif
+
+#if QT_VERSION >= 0x050100
+    // Enable support for highres images (added in Qt 5.1, but off by default)
+    a.setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
 
 #ifndef Q_OS_WIN

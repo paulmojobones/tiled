@@ -31,6 +31,7 @@
 #include <QRegion>
 #include <QString>
 
+class QModelIndex;
 class QPoint;
 class QRect;
 class QSize;
@@ -160,6 +161,7 @@ public:
     void moveTileset(int from, int to);
     void setTilesetFileName(Tileset *tileset, const QString &fileName);
     void setTilesetName(Tileset *tileset, const QString &name);
+    void setTilesetTileOffset(Tileset *tileset, const QPoint &tileOffset);
 
     void duplicateObjects(const QList<MapObject*> &objects);
     void removeObjects(const QList<MapObject*> &objects);
@@ -232,6 +234,7 @@ public:
     void emitMapChanged();
     void emitRegionChanged(const QRegion &region);
     void emitRegionEdited(const QRegion &region, Layer *layer);
+    void emitTilesetChanged(Tileset *tileset);
     void emitTileTerrainChanged(const QList<Tile*> &tiles);
     void emitObjectGroupChanged(ObjectGroup *objectGroup);
     void emitImageLayerChanged(ImageLayer *imageLayer);
@@ -317,11 +320,14 @@ signals:
     void tilesetMoved(int from, int to);
     void tilesetFileNameChanged(Tileset *tileset);
     void tilesetNameChanged(Tileset *tileset);
+    void tilesetTileOffsetChanged(Tileset *tileset);
+    void tilesetChanged(Tileset *tileset);
 
     void objectsAdded(const QList<MapObject*> &objects);
-    void objectsAboutToBeRemoved(const QList<MapObject*> &objects);
+    void objectsInserted(ObjectGroup *objectGroup, int first, int last);
     void objectsRemoved(const QList<MapObject*> &objects);
     void objectsChanged(const QList<MapObject*> &objects);
+    void objectsIndexChanged(ObjectGroup *objectGroup, int first, int last);
 
     void propertyAdded(Object *object, const QString &name);
     void propertyRemoved(Object *object, const QString &name);
@@ -330,6 +336,11 @@ signals:
 
 private slots:
     void onObjectsRemoved(const QList<MapObject*> &objects);
+
+    void onMapObjectModelRowsInserted(const QModelIndex &parent, int first, int last);
+    void onMapObjectModelRowsInsertedOrRemoved(const QModelIndex &parent, int first, int last);
+    void onObjectsMoved(const QModelIndex &parent, int start, int end,
+                        const QModelIndex &destination, int row);
 
     void onLayerAdded(int index);
     void onLayerAboutToBeRemoved(int index);
@@ -403,7 +414,7 @@ inline void MapDocument::emitTileTerrainChanged(const QList<Tile *> &tiles)
 
 /**
  * Emits the objectGroupChanged signal, should be called when changing the
- * color of an object group.
+ * color or drawing order of an object group.
  */
 inline void MapDocument::emitObjectGroupChanged(ObjectGroup *objectGroup)
 {

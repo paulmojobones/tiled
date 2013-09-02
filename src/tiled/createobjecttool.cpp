@@ -34,6 +34,7 @@
 #include "utils.h"
 
 #include <QApplication>
+#include <QKeyEvent>
 #include <QPalette>
 
 using namespace Tiled;
@@ -100,6 +101,30 @@ void CreateObjectTool::deactivate(MapScene *scene)
     AbstractObjectTool::deactivate(scene);
 }
 
+void CreateObjectTool::keyPressed(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_Enter:
+    case Qt::Key_Return:
+        if (mNewMapObjectItem) {
+            if (mMode == CreatePolygon || mMode == CreatePolyline)
+                finishOrCancelPolygon();
+            else
+                finishNewMapObject();
+            return;
+        }
+        break;
+    case Qt::Key_Escape:
+        if (mNewMapObjectItem) {
+            cancelNewMapObject();
+            return;
+        }
+        break;
+    }
+
+    AbstractObjectTool::keyPressed(event);
+}
+
 void CreateObjectTool::mouseEntered()
 {
 }
@@ -162,6 +187,7 @@ void CreateObjectTool::mouseMoved(const QPointF &pos,
 
         mNewMapObjectItem->mapObject()->setPosition(tileCoords);
         mNewMapObjectItem->syncWithMapObject();
+        mNewMapObjectItem->setZValue(10000); // sync may change it
         break;
     }
     case CreatePolygon:
@@ -199,13 +225,7 @@ void CreateObjectTool::mousePressed(QGraphicsSceneMouseEvent *event)
         case CreatePolygon:
         case CreatePolyline:
             if (event->button() == Qt::RightButton) {
-                // The polygon needs to have at least three points and a
-                // polyline needs at least two.
-                int min = mMode == CreatePolygon ? 3 : 2;
-                if (mNewMapObjectItem->mapObject()->polygon().size() >= min)
-                    finishNewMapObject();
-                else
-                    cancelNewMapObject();
+                finishOrCancelPolygon();
             } else if (event->button() == Qt::LeftButton) {
                 QPolygonF current = mNewMapObjectItem->mapObject()->polygon();
                 QPolygonF next = mOverlayPolygonObject->polygon();
@@ -337,6 +357,7 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos,
     objectGroup->addObject(newMapObject);
 
     mNewMapObjectItem = new MapObjectItem(newMapObject, mapDocument());
+    mNewMapObjectItem->setZValue(10000); // same as the BrushItem
     mapScene()->addItem(mNewMapObjectItem);
 }
 
@@ -374,4 +395,15 @@ void CreateObjectTool::finishNewMapObject()
     mapDocument()->undoStack()->push(new AddMapObject(mapDocument(),
                                                       objectGroup,
                                                       newMapObject));
+}
+
+void CreateObjectTool::finishOrCancelPolygon()
+{
+    // The polygon needs to have at least three points and a
+    // polyline needs at least two.
+    int min = mMode == CreatePolygon ? 3 : 2;
+    if (mNewMapObjectItem->mapObject()->polygon().size() >= min)
+        finishNewMapObject();
+    else
+        cancelNewMapObject();
 }

@@ -96,10 +96,15 @@ MapDocument::MapDocument(Map *map, const QString &fileName):
             SIGNAL(objectsAdded(QList<MapObject*>)));
     connect(mMapObjectModel, SIGNAL(objectsChanged(QList<MapObject*>)),
             SIGNAL(objectsChanged(QList<MapObject*>)));
-    connect(mMapObjectModel, SIGNAL(objectsAboutToBeRemoved(QList<MapObject*>)),
-            SIGNAL(objectsAboutToBeRemoved(QList<MapObject*>)));
     connect(mMapObjectModel, SIGNAL(objectsRemoved(QList<MapObject*>)),
             SLOT(onObjectsRemoved(QList<MapObject*>)));
+
+    connect(mMapObjectModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
+            SLOT(onMapObjectModelRowsInserted(QModelIndex,int,int)));
+    connect(mMapObjectModel, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+            SLOT(onMapObjectModelRowsInsertedOrRemoved(QModelIndex,int,int)));
+    connect(mMapObjectModel, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
+            SLOT(onObjectsMoved(QModelIndex,int,int,QModelIndex,int)));
 
     connect(mTerrainModel, SIGNAL(terrainRemoved(Terrain*)),
             SLOT(onTerrainRemoved(Terrain*)));
@@ -564,6 +569,18 @@ void MapDocument::unifyTilesets(Map *map)
 }
 
 /**
+ * Emits the tileset changed signal. This signal is currently used when adding
+ * or removing tiles from a tileset.
+ *
+ * @todo Emit more specific signals.
+ */
+void MapDocument::emitTilesetChanged(Tileset *tileset)
+{
+    Q_ASSERT(mMap->tilesets().contains(tileset));
+    emit tilesetChanged(tileset);
+}
+
+/**
  * Before forwarding the signal, the objects are removed from the list of
  * selected objects, triggering a selectedObjectsChanged signal when
  * appropriate.
@@ -572,6 +589,47 @@ void MapDocument::onObjectsRemoved(const QList<MapObject*> &objects)
 {
     deselectObjects(objects);
     emit objectsRemoved(objects);
+}
+
+void MapDocument::onMapObjectModelRowsInserted(const QModelIndex &parent,
+                                               int first, int last)
+{
+    ObjectGroup *objectGroup = mMapObjectModel->toObjectGroup(parent);
+    if (!objectGroup) // we're not dealing with insertion of objects
+        return;
+
+    emit objectsInserted(objectGroup, first, last);
+    onMapObjectModelRowsInsertedOrRemoved(parent, first, last);
+}
+
+void MapDocument::onMapObjectModelRowsInsertedOrRemoved(const QModelIndex &parent,
+                                                        int first, int last)
+{
+    Q_UNUSED(first)
+
+    ObjectGroup *objectGroup = mMapObjectModel->toObjectGroup(parent);
+    if (!objectGroup)
+        return;
+
+    // Inserting or removing objects changes the index of any that come after
+    const int lastIndex = objectGroup->objectCount() - 1;
+    if (last < lastIndex)
+        emit objectsIndexChanged(objectGroup, last + 1, lastIndex);
+}
+
+void MapDocument::onObjectsMoved(const QModelIndex &parent, int start, int end,
+                                 const QModelIndex &destination, int row)
+{
+    if (parent != destination)
+        return;
+
+    ObjectGroup *objectGroup = mMapObjectModel->toObjectGroup(parent);
+
+    // Determine the full range over which object indexes changed
+    const int first = qMin(start, row);
+    const int last = qMax(end, row - 1);
+
+    emit objectsIndexChanged(objectGroup, first, last);
 }
 
 void MapDocument::onLayerAdded(int index)
@@ -642,6 +700,14 @@ void MapDocument::setTilesetName(Tileset *tileset, const QString &name)
 {
     tileset->setName(name);
     emit tilesetNameChanged(tileset);
+}
+
+void MapDocument::setTilesetTileOffset(Tileset *tileset,
+                                       const QPoint &tileOffset)
+{
+    tileset->setTileOffset(tileOffset);
+    mMap->recomputeDrawMargins();
+    emit tilesetTileOffsetChanged(tileset);
 }
 
 void MapDocument::duplicateObjects(const QList<MapObject *> &objects)

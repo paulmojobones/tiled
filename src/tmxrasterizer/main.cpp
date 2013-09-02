@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
         showVersion();
         return 0;
     }
-    if (options.showHelp || (options.fileToOpen.isEmpty() || options.fileToOpen.isEmpty())) {
+    if (options.showHelp || options.fileToOpen.isEmpty() || options.fileToSave.isEmpty()) {
         showHelp();
         return 0;
     }
@@ -165,6 +165,5 @@ int main(int argc, char *argv[])
         w.setScale(options.scale);
     }
 
-    w.render(options.fileToOpen, options.fileToSave);
-    return 0;
+    return w.render(options.fileToOpen, options.fileToSave);
 }

@@ -37,11 +37,11 @@
 #include "resizemapobject.h"
 #include "renamelayer.h"
 #include "renameterrain.h"
-#include "renametileset.h"
 #include "rotatemapobject.h"
 #include "terrain.h"
 #include "terrainmodel.h"
 #include "tilelayer.h"
+#include "tilesetchanges.h"
 #include "utils.h"
 #include "varianteditorfactory.h"
 #include "variantpropertymanager.h"
@@ -65,7 +65,6 @@ PropertyBrowser::PropertyBrowser(QWidget *parent)
     setRootIsDecorated(false);
     setPropertiesWithoutValueMarked(true);
 
-    mLayerFormatNames.append(QCoreApplication::translate("PreferencesDialog", "Default"));
     mLayerFormatNames.append(QCoreApplication::translate("PreferencesDialog", "XML"));
     mLayerFormatNames.append(QCoreApplication::translate("PreferencesDialog", "Base64 (uncompressed)"));
     mLayerFormatNames.append(QCoreApplication::translate("PreferencesDialog", "Base64 (gzip compressed)"));
@@ -74,6 +73,9 @@ PropertyBrowser::PropertyBrowser(QWidget *parent)
 
     mFlippingFlagNames.append(tr("Horizontal"));
     mFlippingFlagNames.append(tr("Vertical"));
+
+    mDrawOrderNames.append(tr("Top Down"));
+    mDrawOrderNames.append(tr("Manual"));
 
     connect(mVariantManager, SIGNAL(valueChanged(QtProperty*,QVariant)),
             SLOT(valueChanged(QtProperty*,QVariant)));
@@ -149,6 +151,11 @@ void PropertyBrowser::setMapDocument(MapDocument *mapDocument)
         connect(mapDocument, SIGNAL(imageLayerChanged(ImageLayer*)),
                 SLOT(imageLayerChanged(ImageLayer*)));
 
+        connect(mapDocument, SIGNAL(tilesetNameChanged(Tileset*)),
+                SLOT(tilesetChanged(Tileset*)));
+        connect(mapDocument, SIGNAL(tilesetTileOffsetChanged(Tileset*)),
+                SLOT(tilesetChanged(Tileset*)));
+
         TerrainModel *terrainModel = mapDocument->terrainModel();
         connect(terrainModel, SIGNAL(terrainChanged(Tileset*,int)),
                 SLOT(terrainChanged(Tileset*,int)));
@@ -183,13 +190,13 @@ void PropertyBrowser::editCustomProperty(const QString &name)
 
 void PropertyBrowser::mapChanged()
 {
-    if (sender() == mMapDocument)
+    if (mObject == mMapDocument->map())
         updateProperties();
 }
 
 void PropertyBrowser::objectsChanged(const QList<MapObject *> &objects)
 {
-    if (mObject->typeId() == Object::MapObjectType)
+    if (mObject && mObject->typeId() == Object::MapObjectType)
         if (objects.contains(static_cast<MapObject*>(mObject)))
             updateProperties();
 }
@@ -209,6 +216,12 @@ void PropertyBrowser::objectGroupChanged(ObjectGroup *objectGroup)
 void PropertyBrowser::imageLayerChanged(ImageLayer *imageLayer)
 {
     if (mObject == imageLayer)
+        updateProperties();
+}
+
+void PropertyBrowser::tilesetChanged(Tileset *tileset)
+{
+    if (mObject == tileset)
         updateProperties();
 }
 
@@ -360,7 +373,17 @@ void PropertyBrowser::addObjectGroupProperties()
 {
     QtProperty *groupProperty = mGroupManager->addProperty(tr("Object Layer"));
     addLayerProperties(groupProperty);
+
     createProperty(ColorProperty, QVariant::Color, tr("Color"), groupProperty);
+
+    QtVariantProperty *drawOrderProperty =
+            createProperty(DrawOrderProperty,
+                           QtVariantPropertyManager::enumTypeId(),
+                           tr("Drawing Order"),
+                           groupProperty);
+
+    drawOrderProperty->setAttribute(QLatin1String("enumNames"), mDrawOrderNames);
+
     addProperty(groupProperty);
 }
 
@@ -384,6 +407,7 @@ void PropertyBrowser::addTilesetProperties()
 {
     QtProperty *groupProperty = mGroupManager->addProperty(tr("Tileset"));
     createProperty(NameProperty, QVariant::String, tr("Name"), groupProperty);
+    createProperty(TileOffsetProperty, QVariant::Point, tr("Drawing Offset"), groupProperty);
     addProperty(groupProperty);
 }
 
@@ -407,7 +431,7 @@ void PropertyBrowser::applyMapValue(PropertyId id, const QVariant &val)
 
     switch (id) {
     case LayerFormatProperty: {
-        Map::LayerDataFormat format = static_cast<Map::LayerDataFormat>(val.toInt() - 1);
+        Map::LayerDataFormat format = static_cast<Map::LayerDataFormat>(val.toInt());
         command = new ChangeMapProperties(mMapDocument,
                                           map->backgroundColor(),
                                           format);
@@ -521,17 +545,34 @@ void PropertyBrowser::applyTileLayerValue(PropertyId id, const QVariant &val)
 void PropertyBrowser::applyObjectGroupValue(PropertyId id, const QVariant &val)
 {
     ObjectGroup *objectGroup = static_cast<ObjectGroup*>(mObject);
+    QUndoCommand *command = 0;
 
-    if (id == ColorProperty) {
+    switch (id) {
+    case ColorProperty: {
         QColor color = val.value<QColor>();
         if (color == Qt::gray)
             color = QColor();
 
-        QUndoStack *undoStack = mMapDocument->undoStack();
-        undoStack->push(new ChangeObjectGroupProperties(mMapDocument,
-                                                        objectGroup,
-                                                        color));
+        command = new ChangeObjectGroupProperties(mMapDocument,
+                                                  objectGroup,
+                                                  color,
+                                                  objectGroup->drawOrder());
+        break;
     }
+    case DrawOrderProperty: {
+        ObjectGroup::DrawOrder drawOrder = static_cast<ObjectGroup::DrawOrder>(val.toInt());
+        command = new ChangeObjectGroupProperties(mMapDocument,
+                                                  objectGroup,
+                                                  objectGroup->color(),
+                                                  drawOrder);
+        break;
+    }
+    default:
+        break;
+    }
+
+    if (command)
+        mMapDocument->undoStack()->push(command);
 }
 
 void PropertyBrowser::applyImageLayerValue(PropertyId id, const QVariant &val)
@@ -569,12 +610,21 @@ void PropertyBrowser::applyImageLayerValue(PropertyId id, const QVariant &val)
 void PropertyBrowser::applyTilesetValue(PropertyBrowser::PropertyId id, const QVariant &val)
 {
     Tileset *tileset = static_cast<Tileset*>(mObject);
+    QUndoStack *undoStack = mMapDocument->undoStack();
 
-    if (id == NameProperty) {
-        QUndoStack *undoStack = mMapDocument->undoStack();
+    switch (id) {
+    case NameProperty:
         undoStack->push(new RenameTileset(mMapDocument,
                                           tileset,
                                           val.toString()));
+        break;
+    case TileOffsetProperty:
+        undoStack->push(new ChangeTilesetTileOffset(mMapDocument,
+                                                    tileset,
+                                                    val.toPoint()));
+        break;
+    default:
+        break;
     }
 }
 
@@ -617,7 +667,7 @@ void PropertyBrowser::updateProperties()
     switch (mObject->typeId()) {
     case Object::MapType: {
         const Map *map = static_cast<const Map*>(mObject);
-        mIdToProperty[LayerFormatProperty]->setValue(map->layerDataFormat() + 1);
+        mIdToProperty[LayerFormatProperty]->setValue(map->layerDataFormat());
         QColor backgroundColor = map->backgroundColor();
         if (!backgroundColor.isValid())
             backgroundColor = Qt::darkGray;
@@ -659,6 +709,7 @@ void PropertyBrowser::updateProperties()
             if (!color.isValid())
                 color = Qt::gray;
             mIdToProperty[ColorProperty]->setValue(color);
+            mIdToProperty[DrawOrderProperty]->setValue(objectGroup->drawOrder());
             break;
         }
         case Layer::ImageLayerType:
@@ -672,6 +723,7 @@ void PropertyBrowser::updateProperties()
     case Object::TilesetType: {
         const Tileset *tileset = static_cast<const Tileset*>(mObject);
         mIdToProperty[NameProperty]->setValue(tileset->name());
+        mIdToProperty[TileOffsetProperty]->setValue(tileset->tileOffset());
         break;
     }
     case Object::TileType:

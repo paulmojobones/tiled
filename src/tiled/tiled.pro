@@ -45,6 +45,7 @@ SOURCES += aboutdialog.cpp \
     addremovelayer.cpp \
     addremovemapobject.cpp \
     addremoveterrain.cpp \
+    addremovetiles.cpp \
     addremovetileset.cpp \
     automapper.cpp \
     automapperwrapper.cpp \
@@ -55,6 +56,7 @@ SOURCES += aboutdialog.cpp \
     changeimagelayerproperties.cpp \
     changelayer.cpp \
     changemapobject.cpp \
+    changemapobjectsorder.cpp \
     changemapproperties.cpp \
     changeobjectgroupproperties.cpp \
     changepolygon.cpp \
@@ -68,6 +70,7 @@ SOURCES += aboutdialog.cpp \
     commanddatamodel.cpp \
     commanddialog.cpp \
     commandlineparser.cpp \
+    consoledock.cpp \
     createobjecttool.cpp \
     documentmanager.cpp \
     editpolygontool.cpp \
@@ -114,9 +117,9 @@ SOURCES += aboutdialog.cpp \
     propertiesdock.cpp \
     propertybrowser.cpp \
     quickstampmanager.cpp \
+    raiselowerhelper.cpp \
     renamelayer.cpp \
     renameterrain.cpp \
-    renametileset.cpp \
     resizedialog.cpp \
     resizehelper.cpp \
     resizelayer.cpp \
@@ -135,6 +138,7 @@ SOURCES += aboutdialog.cpp \
     tilepainter.cpp \
     tileselectionitem.cpp \
     tileselectiontool.cpp \
+    tilesetchanges.cpp \
     tilesetdock.cpp \
     tilesetmanager.cpp \
     tilesetmodel.cpp \
@@ -146,8 +150,7 @@ SOURCES += aboutdialog.cpp \
     utils.cpp \
     varianteditorfactory.cpp \
     variantpropertymanager.cpp \
-    zoomable.cpp \
-    consoledock.cpp
+    zoomable.cpp
 
 HEADERS += aboutdialog.h \
     abstractobjecttool.h \
@@ -156,6 +159,7 @@ HEADERS += aboutdialog.h \
     addremovelayer.h \
     addremovemapobject.h \
     addremoveterrain.h \
+    addremovetiles.h \
     addremovetileset.h \
     automapper.h \
     automapperwrapper.h \
@@ -166,6 +170,7 @@ HEADERS += aboutdialog.h \
     changeimagelayerproperties.h\
     changelayer.h \
     changemapobject.h \
+    changemapobjectsorder.h \
     changemapproperties.h \
     changeobjectgroupproperties.h \
     changepolygon.h \
@@ -179,6 +184,7 @@ HEADERS += aboutdialog.h \
     commanddialog.h \
     command.h \
     commandlineparser.h \
+    consoledock.h \
     createobjecttool.h \
     documentmanager.h \
     editpolygontool.h \
@@ -225,10 +231,10 @@ HEADERS += aboutdialog.h \
     propertiesdock.h \
     propertybrowser.h \
     quickstampmanager.h \
+    raiselowerhelper.h \
     rangeset.h \
     renamelayer.h \
     renameterrain.h \
-    renametileset.h \
     resizedialog.h \
     resizehelper.h \
     resizelayer.h \
@@ -247,6 +253,7 @@ HEADERS += aboutdialog.h \
     tilepainter.h \
     tileselectionitem.h \
     tileselectiontool.h \
+    tilesetchanges.h \
     tilesetdock.h \
     tilesetmanager.h \
     tilesetmodel.h \
@@ -259,8 +266,7 @@ HEADERS += aboutdialog.h \
     utils.h \
     varianteditorfactory.h \
     variantpropertymanager.h \
-    zoomable.h \
-    consoledock.h
+    zoomable.h
 
 macx {
     OBJECTIVE_SOURCES += macsupport.mm
