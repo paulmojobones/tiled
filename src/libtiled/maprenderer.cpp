@@ -36,6 +36,11 @@
 #include <QPainter>
 #include <QVector2D>
 
+static int round(double x)
+{
+    return static_cast<int>(floor(x + 0.5));
+}
+
 using namespace Tiled;
 
 QRectF MapRenderer::boundingRect(const ImageLayer *imageLayer) const
@@ -107,7 +112,7 @@ CellRenderer::CellRenderer(QPainter *painter)
  * flush when finished doing drawCell calls. This function is also called by
  * the destructor so usually an explicit call it not needed.
  */
-void CellRenderer::render(const Cell &cell, const QPointF &pos, Origin origin)
+void CellRenderer::render(const Cell &cell, const QPointF &pos, const QSizeF &osize, Origin origin)
 {
     if (mTile != cell.tile)
         flush();
@@ -145,7 +150,41 @@ void CellRenderer::render(const Cell &cell, const QPointF &pos, Origin origin)
 
     if (mIsOpenGL || (fragment.scaleX > 0 && fragment.scaleY > 0)) {
         mTile = cell.tile;
-        mFragments.append(fragment);
+        div_t width = div(round(osize.width()), round(size.width()));
+        div_t height = div(round(osize.height()), round(size.height()));
+
+        for (int i = 0; i < width.quot; i++) {
+            for (int j = 0; j < height.quot; j++) {
+                fragment.x = pos.x() + offset.x() + sizeHalf.x() + size.width() * i;
+                fragment.y = pos.y() + offset.y() + sizeHalf.y() - size.height() * (j + 1);
+                fragment.width = size.width();
+                fragment.height = size.height();
+                mFragments.append(fragment);
+            }
+            if (height.rem) {
+                fragment.x = pos.x() + offset.x() + sizeHalf.x() + size.width() * i;
+                fragment.y = pos.y() + offset.y() + 0.5 * height.rem - size.height() * (height.quot + 1);
+                fragment.width = size.width();
+                fragment.height = height.rem;
+                mFragments.append(fragment);
+            }
+        }
+        if (width.rem) {
+            for (int j = 0; j < height.quot; j++) {
+                fragment.x = pos.x() + offset.x() + 0.5 * width.rem + size.width() * width.quot;
+                fragment.y = pos.y() + offset.y() + sizeHalf.y() - size.height() * (j + 1);
+                fragment.width = width.rem;
+                fragment.height = size.height();
+                mFragments.append(fragment);
+            }
+            if (height.rem) {
+                fragment.x = pos.x() + offset.x() + 0.5 * width.rem + size.width() * width.quot;
+                fragment.y = pos.y() + offset.y() + 0.5 * height.rem - size.height() * (height.quot + 1);
+                fragment.width = width.rem;
+                fragment.height = height.rem;
+                mFragments.append(fragment);
+            }
+        }
         return;
     }
 

@@ -190,7 +190,7 @@ void StaggeredRenderer::drawTileLayer(QPainter *painter,
         for (; rowPos.x() < rect.right() && rowTile.x() < layer->width(); rowTile.rx()++) {
             const Cell &cell = layer->cellAt(rowTile);
             if (!cell.isEmpty())
-                renderer.render(cell, rowPos, CellRenderer::BottomLeft);
+                renderer.render(cell, rowPos, cell.tile->size(), CellRenderer::BottomLeft);
 
             rowPos.rx() += tileWidth;
         }

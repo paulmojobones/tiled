@@ -516,13 +516,17 @@ void MapWriterPrivate::writeObject(QXmlStreamWriter &w,
 
     QPoint pos = toPixel(mapObject->x(), mapObject->y());
     QPoint size = toPixel(mapObject->width(), mapObject->height());
+    QSize tileSize(0, 0);
+    if (mapObject->cell().tile) {
+        tileSize = mapObject->cell().tile->size();
+    }
 
     w.writeAttribute(QLatin1String("x"), QString::number(pos.x()));
     w.writeAttribute(QLatin1String("y"), QString::number(pos.y()));
 
-    if (size.x() != 0)
+    if (size.x() != tileSize.width())
         w.writeAttribute(QLatin1String("width"), QString::number(size.x()));
-    if (size.y() != 0)
+    if (size.y() != tileSize.height())
         w.writeAttribute(QLatin1String("height"), QString::number(size.y()));
 
     const qreal rotation = mapObject->rotation();

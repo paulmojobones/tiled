@@ -66,7 +66,7 @@ QRectF OrthogonalRenderer::boundingRect(const MapObject *object) const
     if (!object->cell().isEmpty()) {
         const QPointF bottomLeft = rect.topLeft();
         const Tile *tile = object->cell().tile;
-        const QSize imgSize = tile->image().size();
+        const QSize imgSize(rect.width(), rect.height());
         const QPoint tileOffset = tile->tileset()->tileOffset();
         boundingRect = QRectF(bottomLeft.x() + tileOffset.x(),
                               bottomLeft.y() + tileOffset.y() - imgSize.height(),
@@ -235,6 +235,7 @@ void OrthogonalRenderer::drawTileLayer(QPainter *painter,
 
             renderer.render(cell,
                             QPointF(x * tileWidth, (y + 1) * tileHeight),
+                            cell.tile->size(),
                             CellRenderer::BottomLeft);
         }
     }
@@ -272,19 +273,19 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
     if (!object->cell().isEmpty()) {
         const Cell &cell = object->cell();
 
-        CellRenderer(painter).render(cell, QPointF(),
+        CellRenderer(painter).render(cell, QPointF(), rect.size(),
                                      CellRenderer::BottomLeft);
 
         if (testFlag(ShowTileObjectOutlines)) {
-            const QRect rect = cell.tile->image().rect();
+            const QRect srect(cell.tile->image().rect().topLeft(), QSize(rect.width(), rect.height()));
             QPen pen(Qt::SolidLine);
             pen.setWidth(0);
             painter->setPen(pen);
-            painter->drawRect(rect);
+            painter->drawRect(srect);
             pen.setStyle(Qt::DotLine);
             pen.setColor(color);
             painter->setPen(pen);
-            painter->drawRect(rect);
+            painter->drawRect(srect);
         }
     } else {
         const QPen linePen(color, 2);

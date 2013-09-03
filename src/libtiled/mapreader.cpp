@@ -799,7 +799,7 @@ MapObject *MapReaderPrivate::readObject()
     const QStringRef visibleRef = atts.value(QLatin1String("visible"));
 
     const QPointF pos = pixelToTileCoordinates(mMap, x, y);
-    const QPointF size = pixelToTileCoordinates(mMap, width, height);
+    QPointF size = pixelToTileCoordinates(mMap, width, height);
 
     MapObject *object = new MapObject(name, type, pos, QSizeF(size.x(),
                                                               size.y()));
@@ -809,8 +809,18 @@ MapObject *MapReaderPrivate::readObject()
     if (ok)
         object->setRotation(rotation);
 
-    if (gid)
+    if (gid) {
         object->setCell(cellForGid(gid));
+        if (size.x() == 0 || size.y() == 0) {
+            size = pixelToTileCoordinates(mMap, object->cell().tile->width(), object->cell().tile->height());
+            if (object->size().width() == 0) {
+                object->setWidth(size.x());
+            }
+            if (object->size().height() == 0) {
+                object->setHeight(size.y());
+            }
+        }
+    }
 
     const int visible = visibleRef.toString().toInt(&ok);
     if (ok)
