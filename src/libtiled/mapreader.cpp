@@ -811,7 +811,7 @@ MapObject *MapReaderPrivate::readObject()
 
     if (gid) {
         object->setCell(cellForGid(gid));
-        if (size.x() == 0 || size.y() == 0) {
+        if (object->cell().tile && (size.x() == 0 || size.y() == 0)) {
             size = pixelToTileCoordinates(mMap, object->cell().tile->width(), object->cell().tile->height());
             if (object->size().width() == 0) {
                 object->setWidth(size.x());

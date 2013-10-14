@@ -330,8 +330,15 @@ void CreateObjectTool::startNewMapObject(const QPointF &pos,
     MapObject *newMapObject = new MapObject;
     newMapObject->setPosition(pos);
 
-    if (mMode == CreateTile)
+    if (mMode == CreateTile) {
         newMapObject->setCell(Cell(mTile));
+
+        if (mapDocument() && mapDocument()->map()) {
+            const int tileHeight = mapDocument()->map()->tileHeight();
+            const int tileWidth = mapDocument()->map()->tileWidth();
+            newMapObject->setSize(mTile->width() / tileWidth, mTile->height() / tileHeight);
+        }
+    }
 
     if (mMode == CreatePolygon || mMode == CreatePolyline) {
         MapObject::Shape shape = mMode == CreatePolygon ? MapObject::Polygon

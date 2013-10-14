@@ -215,12 +215,14 @@ void Zoomable::comboEdited()
 {
     int pos = mComboRegExp.indexIn(mComboBox->currentText());
     Q_ASSERT(pos != -1);
+    if (pos != -1) {
 
-    qreal scale = qBound(mZoomFactors.first(),
-                         qreal(mComboRegExp.cap(1).toDouble() / 100.f),
-                         mZoomFactors.last());
+        qreal scale = qBound(mZoomFactors.first(),
+                             qreal(mComboRegExp.cap(1).toDouble() / 100.f),
+                             mZoomFactors.last());
 
-    setScale(scale);
+        setScale(scale);
+    }
 }
 
 void Zoomable::syncComboBox()
